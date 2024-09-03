@@ -1,0 +1,107 @@
+name: CI tests
+
+on:
+  push:
+    branches-ignore:
+      - 'dependabot/**'
+  pull_request:
+
+jobs:
+
+  linter:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - uses: actions/checkout@v4
+    - name: Install clang-tidy
+      run: |
+        sudo apt-get install -y clang-tidy-11
+        sudo update-alternatives --install /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-11 100
+    - name: lint with clang-tidy
+      run: |
+        make lint
+      env:
+        CC: clang
+        CXX: clang++
+
+  linux:
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cmake_opts:
+          - '-DBUILD_SHARED_LIBS=YES'
+          - ''
+        compiler:
+          - c: 'clang'
+            cpp: 'clang++'
+          - c: 'gcc'
+            cpp: 'g++'
+    env:
+       CMAKE_OPTIONS: ${{ matrix.cmake_opts }}
+       CC: ${{ matrix.compiler.c }}
+       CXX: ${{ matrix.compiler.cpp }}
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install valgrind
+      run: |
+         sudo apt update
+         sudo apt install -y valgrind
+    - name: Build and test
+      run: |
+         make
+         make test
+         make leakcheck
+
+  macos:
+
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cmake_opts:
+          - '-DBUILD_SHARED_LIBS=YES'
+          - ''
+        compiler:
+          - c: 'clang'
+            cpp: 'clang++'
+          - c: 'gcc'
+            cpp: 'g++'
+    env:
+       CMAKE_OPTIONS: ${{ matrix.cmake_opts }}
+       CC: ${{ matrix.compiler.c }}
+       CXX: ${{ matrix.compiler.cpp }}
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build and test
+      env:
+         CMAKE_OPTIONS: -DBUILD_SHARED_LIBS=NO
+      run: |
+         make
+         make test
+
+  windows:
+
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cmake_opts:
+          - '-DBUILD_SHARED_LIBS=YES'
+          - ''
+    env:
+       CMAKE_OPTIONS: ${{ matrix.cmake_opts }}
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ilammy/msvc-dev-cmd@v1
+    - name: Build and test
+      run: |
+        chcp 65001
+        nmake.exe /nologo /f Makefile.nmake test
+      shell: cmd

@@ -1,0 +1,7 @@
+builds:
+  exclude:
+    - "*.x86_64-darwin.*"
+  include:
+    - "checks.x86_64-linux.*"
+    - "devShells.*.*"
+    - "packages.*.*"
